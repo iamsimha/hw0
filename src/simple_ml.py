@@ -20,7 +20,7 @@ def add(x, y):
         Sum of x + y
     """
     ### BEGIN YOUR CODE
-    pass
+    return x + y
     ### END YOUR CODE
 
 
@@ -48,7 +48,15 @@ def parse_mnist(image_filename, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR CODE
-    pass
+    with gzip.open(image_filename) as f:
+        pixels = np.frombuffer(f.read(), 'B', offset=16)
+        print(pixels.dtype)
+    
+    with gzip.open(label_filename) as f:
+        labels = np.frombuffer(f.read(), 'B', offset=8)
+        
+        return pixels.reshape(-1, 784).astype(np.float32) / 255.0, labels
+        
     ### END YOUR CODE
 
 
@@ -68,7 +76,7 @@ def softmax_loss(Z, y):
         Average softmax loss over the sample.
     """
     ### BEGIN YOUR CODE
-    pass
+    return np.mean(np.log(np.sum(np.exp(Z), axis=-1)) - Z[np.arange(y.shape[0]), y])
     ### END YOUR CODE
 
 
@@ -90,8 +98,21 @@ def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
     Returns:
         None
     """
+    batch_size = batch
     ### BEGIN YOUR CODE
-    pass
+    num_batches = X.shape[0] // batch_size
+    i = 0
+    while i < X.shape[0]:
+        features = X[i : i + batch_size] # batch_size X dim
+        label = y[i : i + batch_size]
+        theta_x = features.dot(theta) # batch_size * num_classes
+        theta_x = normalize(theta_x)
+        ey = np.zeros_like(theta_x)
+        ey[np.arange(ey.shape[0]), label] = 1
+        grad = 1.0/ batch_size * features.T.dot((theta_x - ey)) # dim * num_classes
+        theta -= lr * grad
+        i += batch_size
+        
     ### END YOUR CODE
 
 
@@ -118,9 +139,41 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    batch_size = batch
+    ### BEGIN YOUR CODE
+    num_batches = X.shape[0] // batch_size
+    i = 0
+    while i < X.shape[0]:
+        features = X[i : i + batch_size] # batch_size X input_dim
+        label = y[i : i + batch_size]
+        z1 = relu(features.dot(W1)) # batch_size X hidden_dim
+        inter_prod = z1.dot(W2) # batch_size X num_classes
+        ey = np.zeros_like(inter_prod) 
+        ey[np.arange(ey.shape[0]), label] = 1 # batxh_size X num_classes
+        g2 = normalize(inter_prod) - ey # batch_size X num_classes
+        g1 = (z1 > 0) * g2.dot(W2.T) # batch_size X hidden_dim
+        
+        grad_w2 = 1.0/batch_size * z1.T.dot(g2)
+        
+        grad_w1 = 1.0/batch_size * features.T.dot(g1)
+        
+        W1 -= lr * grad_w1
+        W2 -= lr * grad_w2
+        i += batch_size
+        
+
     ### END YOUR CODE
 
+    
+def relu(x):
+    mask = np.zeros_like(x)
+    mask[x>0] = 1
+    return x * mask
+
+def normalize(x):
+    num = np.exp(x)
+    den = np.sum(np.exp(x), axis=-1)[:, np.newaxis]
+    return num/den
 
 
 ### CODE BELOW IS FOR ILLUSTRATION, YOU DO NOT NEED TO EDIT
